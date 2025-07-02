@@ -255,20 +255,37 @@ class DocxAppender:
                             "BLOCO",
                             "POÇO",
                         ):
-                            # 1. Filtragem Horizontal (anula os dados fora do período)
+                            # --- ALTERAÇÃO PRINCIPAL AQUI ---
                             for col_name in data_df.columns:
                                 if str(col_name).upper().startswith("MEDIÇÃO"):
                                     col_idx = data_df.columns.get_loc(col_name)
                                     if col_idx > 0:
-                                        dt_col = pd.to_datetime(
-                                            data_df[col_name], errors="coerce"
-                                        )
-                                        null_rows = (
-                                            dt_col.dt.year != measurement_year
-                                        ) | (dt_col.dt.month != measurement_month)
-                                        data_df.iloc[null_rows, col_idx - 1] = np.nan
+                                        # Pega o nome da coluna à esquerda da data
+                                        left_col_name = data_df.columns[col_idx - 1]
 
-                            # 2. Filtragem Vertical (remove linhas sem NENHUMA medição válida)
+                                        # Define as colunas de identificação que não devem ser apagadas
+                                        protected_cols = [
+                                            "AMOSTRAGEM SHELBY",
+                                            "AMOSTRAGEM DENISON",
+                                            "BLOCO INDEFORMADO",
+                                        ]
+
+                                        # Aplica a limpeza APENAS SE a coluna à esquerda não for uma das protegidas
+                                        if (
+                                            str(left_col_name).upper()
+                                            not in protected_cols
+                                        ):
+                                            dt_col = pd.to_datetime(
+                                                data_df[col_name], errors="coerce"
+                                            )
+                                            null_rows = (
+                                                dt_col.dt.year != measurement_year
+                                            ) | (dt_col.dt.month != measurement_month)
+                                            data_df.iloc[null_rows, col_idx - 1] = (
+                                                np.nan
+                                            )
+                            # --- FIM DA ALTERAÇÃO ---
+
                             any_medicao_valid = pd.Series(False, index=data_df.index)
                             for col_name in data_df.columns:
                                 if str(col_name).upper().startswith("MEDIÇÃO"):
@@ -297,16 +314,30 @@ class DocxAppender:
                                 data_df = data_df[mask]
 
                         if not data_df.empty:
-                            # --- LÓGICA DE RENOMEAÇÃO APLICADA AQUI ---
                             final_cols = [
                                 col
                                 for col in SHEET_COLUMN_MAP[sheet_name.upper()]
                                 if col in data_df.columns
                             ]
                             df_to_add = data_df[final_cols].dropna(how="all")
-
-                            # Renomeia as colunas usando o novo mapa
                             df_to_add.rename(columns=COLUMN_RENAME_MAP, inplace=True)
+
+                            if sheet_name.upper() in ("SHELBY", "BLOCO", "DENISON"):
+                                source_column_name = "Umidade"
+                                new_column_name = "Número de camadas"
+
+                                if source_column_name in df_to_add.columns:
+                                    df_to_add[new_column_name] = df_to_add[
+                                        source_column_name
+                                    ]
+                                    cols = df_to_add.columns.tolist()
+                                    umidade_index = cols.index(source_column_name)
+                                    cols.pop(cols.index(new_column_name))
+                                    cols.insert(umidade_index, new_column_name)
+                                    df_to_add = df_to_add[cols]
+                                    print(
+                                        f"Coluna '{new_column_name}' adicionada e reordenada na aba '{sheet_name}'."
+                                    )
 
                             processed_data[sheet_name] = df_to_add
         except Exception as e:
@@ -314,13 +345,17 @@ class DocxAppender:
 
         return processed_data
 
-    # --- NOVA FUNÇÃO DE APOIO PARA CRIAR TABELAS ---
-    def _add_dataframe_as_table(self, doc, df: pd.DataFrame, word_app):
+    def _add_dataframe_as_table(self, doc, df: pd.DataFrame, table_range):
+        """Adiciona um DataFrame como uma tabela em um range específico do documento."""
         if df.empty:
             return
 
-        p = doc.Paragraphs.Add()
-        table = doc.Tables.Add(p.Range, NumRows=df.shape[0] + 1, NumColumns=df.shape[1])
+        # Importa as constantes do Word para uso local
+        from win32com.client import constants as c
+
+        table = doc.Tables.Add(
+            Range=table_range, NumRows=df.shape[0] + 1, NumColumns=df.shape[1]
+        )
         table.Style = "Tabela com grade"
         table.Range.ParagraphFormat.Alignment = c.wdAlignParagraphCenter
         table.Borders.Enable = True
@@ -330,8 +365,8 @@ class DocxAppender:
         header_row.HeadingFormat = True
         header_row.Shading.BackgroundPatternColor = c.wdColorDarkBlue
         header_font = header_row.Range.Font
-        header_font.Size = 8
-        header_font.Name = "Calibri"
+        header_font.Size = 7
+        header_font.Name = "Arial"
         header_font.ColorIndex = c.wdWhite
         header_font.Bold = True
         header_row.Range.ParagraphFormat.Alignment = c.wdAlignParagraphCenter
@@ -339,30 +374,32 @@ class DocxAppender:
         for j, col_name in enumerate(df.columns):
             cell = table.Cell(Row=1, Column=j + 1)
             cell.Range.Text = str(col_name)
-            # --- MELHORIA: Desativa a quebra de linha automática para a célula do cabeçalho ---
             cell.WordWrap = False
             cell.VerticalAlignment = c.wdCellAlignVerticalCenter
-        # Preenche as linhas de dados com conversão segura
+
+        # Preenchimento dos dados
         for i, row_data in enumerate(df.itertuples(index=False)):
             for j, val in enumerate(row_data):
                 cell = table.Cell(i + 2, j + 1)
-
-                # Converte o valor para string de forma segura ANTES de o passar ao Word
-                if pd.isna(val):
-                    cell_text = ""
-                elif isinstance(val, (datetime, pd.Timestamp)):
-                    cell_text = val.strftime("%d/%m/%Y")
-                else:
-                    cell_text = str(val)
+                cell_text = ""
+                if pd.notna(val):
+                    if isinstance(val, (datetime, pd.Timestamp)):
+                        cell_text = val.strftime("%d/%m/%Y")
+                    else:
+                        cell_text = str(val)
 
                 cell.Range.Text = cell_text
-                cell.Range.Font.Size = 8
-                cell.Range.Font.Name = "Calibri"
+                cell.Range.Font.Size = 7
+                cell.Range.Font.Name = "Arial"
                 cell.WordWrap = False
                 cell.VerticalAlignment = c.wdCellAlignVerticalCenter
 
-        table.AutoFitBehavior(c.wdAutoFitContent)
-        print("Tabela inserida no documento com sucesso.")
+        try:
+            table.AutoFitBehavior(c.wdAutoFitContent)
+        except Exception as e:
+            print(f"Não foi possível aplicar o AutoFit: {e}")
+
+        print(f"Tabela com {df.shape[0]} linhas inserida.")
 
     def append_measurement(
         self,
@@ -372,6 +409,22 @@ class DocxAppender:
         measurement_month: int,
         measurement_year: int,
     ):
+        sondagens_str = "Sondagens"
+        ensaios_str = "Ensaios Especiais"
+
+        if sondagens_str in disciplines and ensaios_str in disciplines:
+            idx_sondagens = disciplines.index(sondagens_str)
+            idx_ensaios = disciplines.index(ensaios_str)
+
+            # Se "Sondagens" estiver depois de "Ensaios Especiais", corrige a ordem
+            if idx_sondagens > idx_ensaios:
+                # Remove 'Sondagens' da sua posição atual
+                disciplines.remove(sondagens_str)
+                # Recalcula o índice de 'Ensaios' (pode ter mudado) e insere 'Sondagens' antes
+                new_idx_ensaios = disciplines.index(ensaios_str)
+                disciplines.insert(new_idx_ensaios, sondagens_str)
+                print(f"Ordem das disciplinas ajustada: {disciplines}")
+
         word_app = None
         doc = None
         try:
@@ -379,84 +432,108 @@ class DocxAppender:
             word_app.Visible = False
             doc = word_app.Documents.Open(self.docx_path)
 
-            # --- 1. APLICA A CONFIGURAÇÃO DE NUMERAÇÃO ---
+            # Importa as constantes do Word para uso local
+            from win32com.client import constants as c
+
             if not self._apply_heading_numbering(word_app, doc):
-                return  # Interrompe se a configuração da numeração falhar
+                return
 
-            # --- 2. ADICIONA O CONTEÚDO ---
+            # Move para o final do documento para começar a adicionar conteúdo
             selection = word_app.Selection
-            selection.EndKey(Unit=6)  # Move para o final
+            selection.EndKey(Unit=c.wdStory)
+            selection.TypeParagraph()  # Garante que estamos em um novo parágrafo
 
-            today_date = datetime.now().strftime("%m/%Y")
-
-            # Adiciona o Título 2
+            # --- Título Principal da Medição ---
             selection.Style = "Título 2"
-            selection.TypeText(Text=f"MEDIÇÃO ({today_date})")
+            selection.TypeText(Text=f"MEDIÇÃO ({datetime.now().strftime('%m/%Y')})")
             selection.TypeParagraph()
 
+            # --- Loop Principal por Disciplina ---
             for discipline in disciplines:
-                # Adiciona o Título 3
                 selection.Style = "Título 3"
                 selection.TypeText(Text=discipline)
                 selection.TypeParagraph()
 
-                # Adiciona o texto do utilizador
                 user_text = user_texts.get(discipline, "")
                 if user_text:
                     selection.Style = "Normal"
                     selection.TypeText(Text=user_text)
                     selection.TypeParagraph()
 
-                # Adiciona ficheiros
+                # --- Processamento de Ficheiros (Imagens, PDFs) ---
                 discipline_folder_path = os.path.join(base_evidence_path, discipline)
                 files_to_add = self._find_files(discipline_folder_path)
-
                 excel_files = [
                     f for f in files_to_add if f.lower().endswith((".xlsx", ".xls"))
                 ]
 
-                if not files_to_add:
-                    selection.Style = "Normal"
+                image_files = [
+                    f
+                    for f in files_to_add
+                    if f.lower().endswith((".jpeg", ".jpg", ".png", ".pdf"))
+                ]
+                if not image_files and not excel_files:
                     selection.TypeText(
                         Text="Nenhuma evidência encontrada para esta disciplina."
                     )
                     selection.TypeParagraph()
-                else:
-                    for file_path in files_to_add:
-                        if file_path.lower().endswith((".jpeg", ".jpg", ".png")):
-                            selection.InlineShapes.AddPicture(
-                                FileName=os.path.abspath(file_path),
-                                LinkToFile=False,
-                                SaveWithDocument=True,
-                            )
-                            selection.TypeParagraph()
-                        elif file_path.lower().endswith(".pdf"):
-                            png_path = self._convert_pdf_to_png(file_path)
-                            selection.InlineShapes.AddPicture(
-                                FileName=os.path.abspath(png_path),
-                                LinkToFile=False,
-                                SaveWithDocument=True,
-                            )
-                            selection.TypeParagraph()
+
+                for file_path in image_files:
+                    abs_path = os.path.abspath(file_path)
+                    img_path_to_add = abs_path
+                    if file_path.lower().endswith(".pdf"):
+                        img_path_to_add = self._convert_pdf_to_png(abs_path)
+
+                    if img_path_to_add:
+                        selection.InlineShapes.AddPicture(
+                            FileName=img_path_to_add,
+                            LinkToFile=False,
+                            SaveWithDocument=True,
+                        )
+                        selection.TypeParagraph()
+
+                # --- Processamento de Tabelas Excel (Lógica Central) ---
                 if excel_files:
-                    p_excel_header = doc.Paragraphs.Add()
-                    p_excel_header.Range.Text = "\nDados das Planilhas:"
-                    p_excel_header.Range.Bold = True
+                    selection.Font.Bold = True
+                    selection.TypeText(Text="Dados das Planilhas:")
+                    selection.Font.Bold = False
+                    selection.TypeParagraph()
+
                     for excel_path in excel_files:
                         try:
-                            self.all_excel_data = self._process_excel_file(
+                            all_excel_data = self._process_excel_file(
                                 excel_path,
                                 measurement_month,
                                 measurement_year,
                                 discipline,
                             )
-                            for sheet_name, final_df in self.all_excel_data.items():
-                                p_sheet_name = doc.Paragraphs.Add()
-                                p_sheet_name.Range.Text = f"Tabela da Aba: {sheet_name}"
-                                p_sheet_name.Range.Bold = True
-                                p_sheet_name.Range.Font.Name = "Calibri"
-                                p_sheet_name.Range.InsertParagraphAfter()
-                                if sheet_name.upper() == "TRADO":
+                            WIDE_TABLE_SHEETS = [
+                                "TRADO",
+                                "SHELBY",
+                                "DENISON",
+                                "BLOCO",
+                                "POÇO",
+                            ]
+
+                            for sheet_name, final_df in all_excel_data.items():
+
+                                final_df = final_df.dropna(axis=1, how="all").dropna(
+                                    axis=0, how="all"
+                                )
+
+                                # 2. Pula para a próxima aba se o DataFrame ficar vazio após a limpeza.
+                                if final_df.empty:
+                                    continue
+
+                                selection.Font.Bold = True
+                                selection.TypeText(f"Tabela da Aba: {sheet_name}")
+                                selection.Font.Bold = False
+                                selection.TypeParagraph()
+
+                                # Define o range onde a tabela será inserida
+                                current_range = selection.Range
+
+                                if sheet_name.upper() in WIDE_TABLE_SHEETS:
                                     key_cols = ["Sondagem"]
                                     actual_keys = [
                                         c for c in key_cols if c in final_df.columns
@@ -468,37 +545,48 @@ class DocxAppender:
                                     ]
                                     MAX_DATA_COLS = 9
                                     num_chunks = ceil(len(data_cols) / MAX_DATA_COLS)
+
                                     for i in range(num_chunks):
                                         chunk_cols = data_cols[
                                             i * MAX_DATA_COLS : (i + 1) * MAX_DATA_COLS
                                         ]
                                         table_df = final_df[actual_keys + chunk_cols]
+
+                                        # Adiciona a tabela no range atual e move o cursor para depois dela
                                         self._add_dataframe_as_table(
-                                            doc, table_df, word_app
+                                            doc, table_df, current_range
                                         )
-                                        doc.Paragraphs.Add()  # Espaçamento entre tabelas divididas
+                                        selection.EndKey(
+                                            Unit=c.wdStory
+                                        )  # Move para o fim para continuar
+                                        selection.TypeParagraph()
+                                        current_range = selection.Range
+
                                 else:
+                                    # Adiciona a tabela no range atual e move o cursor para depois dela
                                     self._add_dataframe_as_table(
-                                        doc, final_df, word_app
+                                        doc, final_df, current_range
                                     )
-                        # Por enquanto, apenas printamos. No futuro, podemos adicionar a tabela ao Word.
+                                    selection.EndKey(
+                                        Unit=c.wdStory
+                                    )  # Move para o fim para continuar
+                                    selection.TypeParagraph()
+
                         except Exception as e:
-                            print(f"Erro ao ler o arquivo Excel '{excel_path}': {e}")
+                            print(
+                                f"Erro CRÍTICO ao processar tabelas do Excel '{excel_path}': {e}"
+                            )
 
-                selection.TypeParagraph()
-
-            # --- 3. SALVA E FECHA ---
-            doc.Fields.Update()  # Força a atualização de todos os campos
+            # --- Finalização ---
+            doc.Fields.Update()
             doc.Save()
             messagebox.showinfo(
-                "Sucesso",
-                f"Conteúdo adicionado e numerado com sucesso em:\n{self.docx_path}",
+                "Sucesso", f"Conteúdo adicionado com sucesso em:\n{self.docx_path}"
             )
 
         except Exception as e:
             messagebox.showerror(
-                "Erro ao Adicionar ao Documento",
-                f"Ocorreu um erro fatal ao interagir com o Word:\n{e}",
+                "Erro Fatal", f"Ocorreu um erro fatal ao interagir com o Word:\n{e}"
             )
         finally:
             if doc:
@@ -506,5 +594,6 @@ class DocxAppender:
             if word_app:
                 word_app.Quit()
 
-        self._define_magin_title(self.docx_path, 36, 36)
-        self._centralize_image(self.docx_path)
+            # Funções de formatação final
+            self._define_magin_title(self.docx_path, 36, 36)
+            self._centralize_image(self.docx_path)

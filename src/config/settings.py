@@ -137,10 +137,7 @@ SHEET_COLUMN_MAP = {
     ],
     "TRADO": [
         "SONDAGEM A TRADO",
-        "km",
         "PROFUNDIDADE EXECUTADA (m)",
-        "NORTE",
-        "LESTE",
         "UMIDADE NATURAL",
         "DENSIDADE IN SITU",
         "LL-LP",
@@ -154,10 +151,7 @@ SHEET_COLUMN_MAP = {
     ],
     "POÇO": [
         "POÇO DE INSPEÇÃO",
-        "km",
         "PROFUNDIDADE EXECUTADA (m)",
-        "NORTE",
-        "LESTE",
         "UMIDADE NATURAL",
         "DENSIDADE IN SITU",
         "LL-LP",
@@ -171,18 +165,12 @@ SHEET_COLUMN_MAP = {
     ],
     "MISTA": [
         "SONDAGEM MISTA",
-        "km",
         "PROFUNDIDADE EXECUTADA EM SOLO (m)",
         "PROFUNDIDADE EXECUTADA EM ROCHA (m)",
-        "NORTE",
-        "LESTE",
     ],
     "SHELBY": [
         "AMOSTRAGEM SHELBY",
-        "km",
         "PROFUNDIDADE EXECUTADA (m)",
-        "NORTE",
-        "LESTE",
         "UMIDADE NATURAL",
         "DENSIDADE IN SITU",
         "LL-LP",
@@ -195,10 +183,7 @@ SHEET_COLUMN_MAP = {
     ],
     "DENISON": [
         "AMOSTRAGEM DENISON",
-        "km",
         "PROFUNDIDADE EXECUTADA (m)",
-        "NORTE",
-        "LESTE",
         "UMIDADE NATURAL",
         "DENSIDADE IN SITU",
         "LL-LP",
@@ -217,10 +202,7 @@ SHEET_COLUMN_MAP = {
     ],
     "BLOCO": [
         "BLOCO INDEFORMADO",
-        "km",
         "PROFUNDIDADE EXECUTADA (m)",
-        "NORTE",
-        "LESTE",
         "UMIDADE NATURAL",
         "DENSIDADE IN SITU",
         "LL-LP",
@@ -239,9 +221,6 @@ SHEET_COLUMN_MAP = {
     ],
     "CPTU": [
         "ENSAIO DE PIEZOCONE",
-        "km",
-        "NORTE",
-        "LESTE",
         "PROFUNDIDADE PROGRAMADA MÁXIMA (m)",
         "REALIZAR ENSAIO DE DISSIPAÇÃO EM (m)",
     ],
@@ -268,6 +247,7 @@ COLUMN_RENAME_MAP = {
     "PROFUNDIDADE EXECUTADA (m)": "Prof. Exec. (m)",
     "PROFUNDIDADE EXECUTADA EM SOLO (m)": "Prof. Exec. Solo (m)",
     "PROFUNDIDADE EXECUTADA EM ROCHA (m)": "Prof. Exec. Rocha (m)",
+    "PROFUNDIDADE PROGRAMADA MÁXIMA (m)": "Prof. Prog. Máx (m)",
     "REALIZAR ENSAIO DE DISSIPAÇÃO EM (m)": "ENSAIO DE DISSIPAÇÃO",
     "UMIDADE NATURAL": "Umidade",
     "DENSIDADE IN SITU": "Dens",
@@ -283,5 +263,5 @@ COLUMN_RENAME_MAP = {
 
 DISCIPLINE_SHEET_TYPES = {
     "Sondagens": ["PERCUSSÃO", "TRADO", "POÇO", "MISTA"],
-    "Ensaios Especiais": ["SHELBY", "DENISON", "BLOCO", "MISTA", "CPTU", "VANE"],
+    "Ensaios Especiais": ["SHELBY", "DENISON", "BLOCO", "CPTU", "VANE"],
 }
