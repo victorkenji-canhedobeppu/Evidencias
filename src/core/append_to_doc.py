@@ -345,7 +345,7 @@ class DocxAppender:
 
         return processed_data
 
-    def _add_dataframe_as_table(self, doc, df: pd.DataFrame, table_range):
+    def _add_dataframe_as_table(self, doc, df: pd.DataFrame, table_range, word_app):
         """Adiciona um DataFrame como uma tabela em um range específico do documento."""
         if df.empty:
             return
@@ -356,6 +356,10 @@ class DocxAppender:
         table = doc.Tables.Add(
             Range=table_range, NumRows=df.shape[0] + 1, NumColumns=df.shape[1]
         )
+        table.Select()
+
+        # 2. Aplica a formatação de parágrafo à SELEÇÃO atual (a tabela in
+        word_app.Selection.ParagraphFormat.Alignment = c.wdAlignParagraphCenter
         table.Style = "Tabela com grade"
         table.Range.ParagraphFormat.Alignment = c.wdAlignParagraphCenter
         table.Borders.Enable = True
@@ -444,19 +448,37 @@ class DocxAppender:
             selection.TypeParagraph()  # Garante que estamos em um novo parágrafo
 
             # --- Título Principal da Medição ---
+            mes_formatado = str(self.measurement_month).zfill(2)
             selection.Style = "Título 2"
-            selection.TypeText(Text=f"MEDIÇÃO ({datetime.now().strftime('%m/%Y')})")
+            selection.Font.Name = "Arial"
+            selection.TypeText(
+                Text=f"MEDIÇÃO ({mes_formatado}/{self.measurement_year})"
+            )
             selection.TypeParagraph()
+
+            selection.Style = "Título 3"
+            selection.Font.Name = "Arial"
+            selection.TypeText(Text="Projeto")
+            selection.TypeParagraph()
+
+            user_text = user_texts.get("Projeto", "")
+            if user_text:
+                selection.Style = "Normal"
+                selection.Font.Name = "Arial"
+                selection.TypeText(Text=user_text)
+                selection.TypeParagraph()
 
             # --- Loop Principal por Disciplina ---
             for discipline in disciplines:
                 selection.Style = "Título 3"
+                selection.Font.Name = "Arial"
                 selection.TypeText(Text=discipline)
                 selection.TypeParagraph()
 
                 user_text = user_texts.get(discipline, "")
                 if user_text:
                     selection.Style = "Normal"
+                    selection.Font.Name = "Arial"
                     selection.TypeText(Text=user_text)
                     selection.TypeParagraph()
 
@@ -476,6 +498,7 @@ class DocxAppender:
                     selection.TypeText(
                         Text="Nenhuma evidência encontrada para esta disciplina."
                     )
+                    selection.Font.Name = "Arial"
                     selection.TypeParagraph()
 
                 for file_path in image_files:
@@ -494,11 +517,6 @@ class DocxAppender:
 
                 # --- Processamento de Tabelas Excel (Lógica Central) ---
                 if excel_files:
-                    selection.Font.Bold = True
-                    selection.TypeText(Text="Dados das Planilhas:")
-                    selection.Font.Bold = False
-                    selection.TypeParagraph()
-
                     for excel_path in excel_files:
                         try:
                             all_excel_data = self._process_excel_file(
@@ -525,9 +543,14 @@ class DocxAppender:
                                 if final_df.empty:
                                     continue
 
+                                selection.ParagraphFormat.Alignment = (
+                                    c.wdAlignParagraphCenter
+                                )
                                 selection.Font.Bold = True
-                                selection.TypeText(f"Tabela da Aba: {sheet_name}")
+                                selection.TypeText(f"Tabela: {sheet_name}")
                                 selection.Font.Bold = False
+
+                                # 2. Pula para o próximo parágrafo (que também será centralizado)
                                 selection.TypeParagraph()
 
                                 # Define o range onde a tabela será inserida
@@ -554,7 +577,7 @@ class DocxAppender:
 
                                         # Adiciona a tabela no range atual e move o cursor para depois dela
                                         self._add_dataframe_as_table(
-                                            doc, table_df, current_range
+                                            doc, table_df, current_range, word_app
                                         )
                                         selection.EndKey(
                                             Unit=c.wdStory
@@ -565,7 +588,7 @@ class DocxAppender:
                                 else:
                                     # Adiciona a tabela no range atual e move o cursor para depois dela
                                     self._add_dataframe_as_table(
-                                        doc, final_df, current_range
+                                        doc, final_df, current_range, word_app
                                     )
                                     selection.EndKey(
                                         Unit=c.wdStory

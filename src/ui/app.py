@@ -139,11 +139,6 @@ class App(ctk.CTk):
         )
         self.selected_date_label.pack(side="left", padx=15)
 
-        # Botões de Ação
-        self.filter_button = ctk.CTkButton(
-            filter_ops_frame, text="Filtrar", command=self.filter_data, state="disabled"
-        )
-        self.filter_button.pack(side="left", padx=5)
         self.clear_filter_button = ctk.CTkButton(
             filter_ops_frame,
             text="Limpar Filtro",
@@ -236,6 +231,7 @@ class App(ctk.CTk):
             self.selected_month.set(month)
             self.selected_year.set(year)
             self.selected_date_label.configure(text=f"Data selecionada: {month}/{year}")
+            self.filter_data()
 
         MonthYearPicker(self, on_selection)
 
@@ -259,7 +255,7 @@ class App(ctk.CTk):
             return
 
         selected_month_num = self.month_map[month_str]
-        
+
         answer = messagebox.askquestion(
             "Verificação de Documento",
             "Já existe um documento de evidência para este registro?",
@@ -312,7 +308,6 @@ class App(ctk.CTk):
             )
             self.active_df = self.original_df
             self.file_label.configure(text=file_path.split("/")[-1], text_color="green")
-            self.filter_button.configure(state="normal")
             self.clear_filter_button.configure(state="normal")
             self.document_button.configure(state="normal")
             self.current_page = 1
@@ -324,7 +319,6 @@ class App(ctk.CTk):
             )
             self.original_df, self.active_df = pd.DataFrame(), pd.DataFrame()
             self.file_label.configure(text="Falha ao carregar", text_color="red")
-            self.filter_button.configure(state="disabled")
             self.clear_filter_button.configure(state="disabled")
             self.document_button.configure(state="disabled")
             self.update_paginated_view()

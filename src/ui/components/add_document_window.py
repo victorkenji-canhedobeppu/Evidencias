@@ -40,6 +40,15 @@ class AddMeasurementWindow(ctk.CTkToplevel):
         scrollable_frame.pack(expand=True, fill="both", padx=15, pady=15)
 
         self.text_entries = {}
+        label = ctk.CTkLabel(
+            scrollable_frame, text="Projeto", font=ctk.CTkFont(weight="bold")
+        )
+        label.pack(fill="x", padx=10, pady=(10, 2))
+
+        textbox = ctk.CTkTextbox(scrollable_frame, height=80)
+        textbox.pack(fill="x", expand=True, padx=10, pady=(0, 10))
+        self.text_entries["Projeto"] = textbox
+
         for discipline in self.disciplines:
             label = ctk.CTkLabel(
                 scrollable_frame, text=discipline, font=ctk.CTkFont(weight="bold")

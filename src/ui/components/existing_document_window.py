@@ -56,7 +56,7 @@ class ExistingDocumentWindow(ctk.CTkToplevel):
         self.sondagens_var = ctk.IntVar(value=1)
         self.sondagens_check = ctk.CTkCheckBox(
             checkbox_frame,
-            text="Criar pasta 'Sondagens' (com subpastas)",
+            text="Criar pasta 'Sondagens'",
             variable=self.sondagens_var,
         )
         self.sondagens_check.pack(anchor="w", pady=5)
@@ -79,16 +79,12 @@ class ExistingDocumentWindow(ctk.CTkToplevel):
             text="Executar Criação de Pastas",
             command=self.create_folders_action,
         )
-        self.create_folders_button.grid(
-            row=0, column=0, padx=(0, 5), pady=10, sticky="ew"
-        )
+        self.create_folders_button.grid(row=0, column=0, pady=(0, 10), sticky="ew")
 
-        self.add_to_doc_button = ctk.CTkButton(
+        self.generate_doc_button = ctk.CTkButton(
             button_frame, text="Adicionar ao Documento", command=self.add_to_doc_action
         )
-        self.add_to_doc_button.grid(
-            row=1, column=0, columnspan=2, padx=0, pady=(0, 10), sticky="ew"
-        )
+        self.generate_doc_button.grid(row=1, column=0, pady=10, sticky="ew")
 
     def create_folders_action(self):
         """Executa a criação de pastas com base na seleção dos checkboxes."""
