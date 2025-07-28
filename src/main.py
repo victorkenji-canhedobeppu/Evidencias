@@ -14,7 +14,7 @@ if __name__ == "__main__":
     app.mainloop()
 
 
-# TODO Tabelas como subtitulo e.g 1.2.2.1
-# TODO seleção de projet e.g Projeto de Geometria
-# TODO Texto padrão para campos padrão
 # TODO colocar listagem de arquivo emitidos no projeto
+# Se for dar erro esta na append_to_doc na fonte
+
+# VIBECODE

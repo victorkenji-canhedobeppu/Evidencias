@@ -48,7 +48,7 @@ SHEET_COLUMN_MAP = {
 
 # --- Dados do Filtro (Exemplo) ---
 measurement_year = 2025
-measurement_month = 6  # Junho
+measurement_month = 1  # Junho
 print(f"Filtrando pela medição: Mês {measurement_month:02d}/{measurement_year}")
 
 # --- Caminho para o Ficheiro ---

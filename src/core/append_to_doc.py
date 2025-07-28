@@ -47,7 +47,6 @@ class DocxAppender:
         """
         try:
             # Pega na galeria de listas de múltiplos níveis
-            gallery = word_app.ListGalleries(c.wdOutlineNumberGallery)
 
             # Adiciona um novo template de lista ao documento. Isto "reseta" a formatação.
             list_template = doc.ListTemplates.Add(True)
@@ -56,8 +55,8 @@ class DocxAppender:
 
             lvl1 = list_template.ListLevels(1)
             lvl1.NumberFormat = "%1"  # Formato "NúmeroDoNível1.NúmeroDoNível2"
-            lvl1.TrailingCharacter = c.wdTrailingTab
-            lvl1.NumberStyle = c.wdListNumberStyleArabic
+            lvl1.TrailingCharacter = 2
+            lvl1.NumberStyle = 0
             lvl1.LinkedStyle = "Título 1"
             lvl1.NumberPosition = 0
             lvl1.TextPosition = text_position_pt
@@ -66,8 +65,8 @@ class DocxAppender:
             # Define o Nível 2 para estar ligado ao estilo "Título 2"
             lvl2 = list_template.ListLevels(2)
             lvl2.NumberFormat = "%1.%2"  # Formato "NúmeroDoNível1.NúmeroDoNível2"
-            lvl2.TrailingCharacter = c.wdTrailingTab
-            lvl2.NumberStyle = c.wdListNumberStyleArabic
+            lvl2.TrailingCharacter = 2
+            lvl2.NumberStyle = 0
             lvl2.LinkedStyle = "Título 2"
             lvl2.NumberPosition = 0
             lvl2.TextPosition = text_position_pt
@@ -76,12 +75,21 @@ class DocxAppender:
             # Define o Nível 3 para estar ligado ao estilo "Título 3"
             lvl3 = list_template.ListLevels(3)
             lvl3.NumberFormat = "%1.%2.%3"  # Formato "N1.N2.N3"
-            lvl3.TrailingCharacter = c.wdTrailingTab
-            lvl3.NumberStyle = c.wdListNumberStyleArabic
+            lvl3.TrailingCharacter = 2
+            lvl3.NumberStyle = 0
             lvl3.LinkedStyle = "Título 3"
             lvl3.NumberPosition = 0
             lvl3.TextPosition = text_position_pt
             lvl3.TabPosition = text_position_pt
+
+            lvl4 = list_template.ListLevels(4)
+            lvl4.NumberFormat = "%1.%2.%3.%4"  # Formato "N1.N2.N3"
+            lvl4.TrailingCharacter = 2
+            lvl4.NumberStyle = 0
+            lvl4.LinkedStyle = "Título 4"
+            lvl4.NumberPosition = 0
+            lvl4.TextPosition = text_position_pt
+            lvl4.TabPosition = text_position_pt
 
             print("Numeração dos estilos de título foi configurada com sucesso.")
             return True
@@ -343,6 +351,8 @@ class DocxAppender:
         except Exception as e:
             print(f"Erro ao processar o arquivo Excel '{excel_path}': {e}")
 
+        print(processed_data)
+
         return processed_data
 
     def _add_dataframe_as_table(self, doc, df: pd.DataFrame, table_range, word_app):
@@ -359,27 +369,27 @@ class DocxAppender:
         table.Select()
 
         # 2. Aplica a formatação de parágrafo à SELEÇÃO atual (a tabela in
-        word_app.Selection.ParagraphFormat.Alignment = c.wdAlignParagraphCenter
+        word_app.Selection.ParagraphFormat.Alignment = 1
         table.Style = "Tabela com grade"
-        table.Range.ParagraphFormat.Alignment = c.wdAlignParagraphCenter
+        table.Range.ParagraphFormat.Alignment = 1
         table.Borders.Enable = True
 
         # Formatação do Cabeçalho
         header_row = table.Rows(1)
         header_row.HeadingFormat = True
-        header_row.Shading.BackgroundPatternColor = c.wdColorDarkBlue
+        header_row.Shading.BackgroundPatternColor = 8388608
         header_font = header_row.Range.Font
         header_font.Size = 7
         header_font.Name = "Arial"
-        header_font.ColorIndex = c.wdWhite
+        header_font.ColorIndex = 8
         header_font.Bold = True
-        header_row.Range.ParagraphFormat.Alignment = c.wdAlignParagraphCenter
+        header_row.Range.ParagraphFormat.Alignment = 1
 
         for j, col_name in enumerate(df.columns):
             cell = table.Cell(Row=1, Column=j + 1)
             cell.Range.Text = str(col_name)
             cell.WordWrap = False
-            cell.VerticalAlignment = c.wdCellAlignVerticalCenter
+            cell.VerticalAlignment = 1
 
         # Preenchimento dos dados
         for i, row_data in enumerate(df.itertuples(index=False)):
@@ -396,7 +406,7 @@ class DocxAppender:
                 cell.Range.Font.Size = 7
                 cell.Range.Font.Name = "Arial"
                 cell.WordWrap = False
-                cell.VerticalAlignment = c.wdCellAlignVerticalCenter
+                cell.VerticalAlignment = 1
 
         try:
             table.AutoFitBehavior(c.wdAutoFitContent)
@@ -444,7 +454,7 @@ class DocxAppender:
 
             # Move para o final do documento para começar a adicionar conteúdo
             selection = word_app.Selection
-            selection.EndKey(Unit=c.wdStory)
+            selection.EndKey(Unit=6)
             selection.TypeParagraph()  # Garante que estamos em um novo parágrafo
 
             # --- Título Principal da Medição ---
@@ -458,7 +468,7 @@ class DocxAppender:
 
             selection.Style = "Título 3"
             selection.Font.Name = "Arial"
-            selection.TypeText(Text="Projeto")
+            selection.TypeText(Text=" Projeto")
             selection.TypeParagraph()
 
             user_text = user_texts.get("Projeto", "")
@@ -543,11 +553,10 @@ class DocxAppender:
                                 if final_df.empty:
                                     continue
 
-                                selection.ParagraphFormat.Alignment = (
-                                    c.wdAlignParagraphCenter
-                                )
+                                selection.ParagraphFormat.Alignment = 1
+                                selection.Style = "Título 4"
                                 selection.Font.Bold = True
-                                selection.TypeText(f"Tabela: {sheet_name}")
+                                selection.TypeText(f" Tabela: {sheet_name}")
                                 selection.Font.Bold = False
 
                                 # 2. Pula para o próximo parágrafo (que também será centralizado)
@@ -580,7 +589,7 @@ class DocxAppender:
                                             doc, table_df, current_range, word_app
                                         )
                                         selection.EndKey(
-                                            Unit=c.wdStory
+                                            Unit=6
                                         )  # Move para o fim para continuar
                                         selection.TypeParagraph()
                                         current_range = selection.Range
@@ -591,7 +600,7 @@ class DocxAppender:
                                         doc, final_df, current_range, word_app
                                     )
                                     selection.EndKey(
-                                        Unit=c.wdStory
+                                        Unit=6
                                     )  # Move para o fim para continuar
                                     selection.TypeParagraph()
 
