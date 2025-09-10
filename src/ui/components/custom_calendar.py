@@ -65,64 +65,6 @@ class CustomCalendar(ctk.CTkToplevel):
         elif self.view == "years":
             self._create_years_view()
 
-    def _create_days_view(self):
-        header_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        header_frame.pack(pady=5, padx=5)
-
-        ctk.CTkButton(header_frame, text="<", command=self._prev_month, width=30).pack(
-            side="left"
-        )
-
-        month_year_text = (
-            f"{calendar.month_name[self.current_month]}, {self.current_year}"
-        )
-        ctk.CTkButton(
-            header_frame,
-            text=month_year_text,
-            command=lambda: self.switch_view("months"),
-            font=ctk.CTkFont(size=14, weight="bold"),
-        ).pack(side="left", padx=10, expand=True)
-
-        ctk.CTkButton(header_frame, text=">", command=self._next_month, width=30).pack(
-            side="left"
-        )
-
-        days_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        days_frame.pack(pady=5)
-        for day in ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"]:
-            ctk.CTkLabel(
-                days_frame, text=day, width=35, height=25, font=ctk.CTkFont(size=12)
-            ).pack(side="left", padx=2)
-
-        calendar_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        calendar_frame.pack()
-
-        month_calendar = calendar.monthcalendar(self.current_year, self.current_month)
-        for week in month_calendar:
-            week_frame = ctk.CTkFrame(calendar_frame, fg_color="transparent")
-            week_frame.pack()
-            for day in week:
-                if day == 0:
-                    ctk.CTkLabel(week_frame, text="", width=35, height=35).pack(
-                        side="left", padx=2, pady=2
-                    )
-                else:
-                    btn = ctk.CTkButton(
-                        week_frame,
-                        text=str(day),
-                        command=lambda d=day: self._on_date_select(d),
-                        width=35,
-                        height=35,
-                    )
-                    if (self.current_year, self.current_month, day) == (
-                        self.today.year,
-                        self.today.month,
-                        self.today.day,
-                    ):
-                        btn.configure(fg_color=("#2FA572", "#146C46"))
-                    btn.pack(side="left", padx=2, pady=2)
-
-    def _create_months_view(self):
         header_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         header_frame.pack(pady=5, padx=5)
 

@@ -5,12 +5,35 @@
 import os
 import pandas as pd
 import re
+import shutil
 
 from config.settings import (
     ANTT_DISCIPLINES_TYPES,
     ARTESP_FILE_GROUPED_TYPES,
 )
 
+list  = [
+    "01.TO",
+    "02.GE",
+    "03.TE",
+    "05.SI",
+    "06.OC",
+    "07.PV",
+    "08.ES",
+    "09.EL",
+    "10.GG",
+    "11.IN",
+    "12.DS",
+    "13.DV",
+    "14.AQ",
+    "15.HI",
+    "16.AR",
+    "17.PA",
+    "18.TR",
+    "19.PL",
+    "20.MF",
+    "21.GR"
+]
 
 class FolderCreator:
     def __init__(self, project_type: str, df: pd.DataFrame, file_path: str):
@@ -40,7 +63,42 @@ class FolderCreator:
                 return discipline
         return None
 
-    # --- FUNÇÃO ATUALIZADA COM A ESTRUTURA DE PASTAS CORRETA ---
+    def _search_and_copy_pdfs(self, base_directory: str, root_folder_path: str):
+        """
+        Procura por arquivos PDF e os copia para as pastas de disciplina correspondentes,
+        incluindo subpastas.
+        """
+        list = [
+            "01.TO", "02.GE", "03.TE", "05.SI", "06.OC", "07.PV", "08.ES", "09.EL", "10.GG", 
+            "11.IN", "12.DS", "13.DV", "14.AQ", "15.HI", "16.AR", "17.PA", "18.TR", "19.PL", "20.MF", "21.GR"
+        ]
+
+        for _, row in self.df.iterrows():
+            agency_code = row.get("CÓDIGO AGENCIA")
+            if agency_code:
+                file_prefix = str(agency_code)
+                for folder_name in list:
+                    search_path = os.path.join(base_directory, folder_name)
+                    
+                    # Usa os.walk para percorrer todas as subpastas
+                    for root, _, files in os.walk(search_path):
+                        for f in files:
+                            if f.endswith(".pdf") and f[:39] == file_prefix:
+                                source_pdf_path = os.path.join(root, f)
+                                
+                                discipline = self._find_discipline(agency_code)
+                                if discipline:
+                                    destination_folder_path = os.path.join(root_folder_path, discipline)
+                                    destination_pdf_path = os.path.join(destination_folder_path, f)
+                                    
+                                    try:
+                                        shutil.copy2(source_pdf_path, destination_pdf_path)
+                                        print(f"✅ PDF '{f}' copiado para '{destination_folder_path}'")
+                                    except shutil.Error as e:
+                                        print(f"⚠️ Erro ao copiar o PDF '{f}': {e}")
+                                    # Não usa break aqui para continuar procurando outros PDFs com o mesmo código, se houver
+
+        # --- FUNÇÃO ATUALIZADA COM A ESTRUTURA DE PASTAS CORRETA ---
     def create_folders_for_active_data(
         self, create_sondagens: bool, create_ensaios: bool
     ) -> tuple[bool, str, str | None]:
@@ -114,6 +172,8 @@ class FolderCreator:
                         f"Não foi possível criar a pasta '{discipline}'.\nErro: {e}",
                         None,
                     )
+            
+        self._search_and_copy_pdfs(base_directory, root_folder_path)
 
         return (
             True,

@@ -462,7 +462,7 @@ class DocxAppender:
             selection.Style = "Título 2"
             selection.Font.Name = "Arial"
             selection.TypeText(
-                Text=f"MEDIÇÃO ({mes_formatado}/{self.measurement_year})"
+                Text=f" MEDIÇÃO ({mes_formatado}/{self.measurement_year})"
             )
             selection.TypeParagraph()
 
@@ -475,14 +475,14 @@ class DocxAppender:
             if user_text:
                 selection.Style = "Normal"
                 selection.Font.Name = "Arial"
-                selection.TypeText(Text=user_text)
+                selection.TypeText(Text=f" {user_text}")
                 selection.TypeParagraph()
 
             # --- Loop Principal por Disciplina ---
             for discipline in disciplines:
                 selection.Style = "Título 3"
                 selection.Font.Name = "Arial"
-                selection.TypeText(Text=discipline)
+                selection.TypeText(Text=f" {discipline}:")
                 selection.TypeParagraph()
 
                 user_text = user_texts.get(discipline, "")
